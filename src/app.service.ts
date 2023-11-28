@@ -1,10 +1,16 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as ytdl from 'ytdl-core';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import { DownloadVideo, UrlValidation } from './dto/validation.dto';
 import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
+import path from 'path';
 
 // type VideoMetadata = {
 //   mimeType: string;
@@ -36,7 +42,13 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppService {
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private readonly schduleDelete: Logger,
+  ) {
+    this.createDownloadsDirectory();
+  }
+
   async getHello(): Promise<any> {
     return 'hello';
     const videoURL = 'https://youtu.be/8ZQJDnWv9hw';
@@ -1030,4 +1042,62 @@ export class AppService {
 
   //   return { itag, videoUrl, hasAudio };
   // }
+
+  @Cron('* 10 * * * *')
+  handleDownload() {
+    this.deleteFilesOlderThan5Minutes('./downloads');
+  }
+
+  deleteFilesOlderThan5Minutes(directoryPath: string): void {
+    const directory: string = path.join(__dirname, directoryPath);
+
+    fs.readdir(directory, (err, files) => {
+      if (err) {
+        console.error('Error reading directory:', err);
+        return;
+      }
+
+      const now: number = Date.now();
+      const fiveMinutes: number = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+      files.forEach((file) => {
+        const filePath: string = path.join(directory, file);
+
+        fs.stat(filePath, (err, stats) => {
+          if (err) {
+            console.error(`Error getting file stats for ${file}:`, err);
+            return;
+          }
+
+          const creationTime: number = stats.birthtime.getTime();
+
+          if (now - creationTime > fiveMinutes) {
+            fs.unlink(filePath, (err) => {
+              if (err) {
+                console.error(`Error deleting ${file}:`, err);
+                return;
+              }
+              console.log(`${file} was deleted successfully.`);
+            });
+          }
+        });
+      });
+    });
+  }
+
+  private createDownloadsDirectory(): void {
+    const downloadsPath = path.join(__dirname, './downloads');
+
+    fs.mkdir(downloadsPath, { recursive: true }, (err) => {
+      if (err) {
+        if (err.code === 'EEXIST') {
+          console.log("'downloads' directory already exists.");
+        } else {
+          console.error('Error creating directory:', err);
+        }
+      } else {
+        console.log("'downloads' directory created successfully!");
+      }
+    });
+  }
 }
