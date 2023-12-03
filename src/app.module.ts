@@ -14,6 +14,9 @@ import { join } from 'path';
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'out'),
+      serveStaticOptions: {
+        maxAge: 86400000,
+      },
     }),
   ],
   controllers: [AppController],
