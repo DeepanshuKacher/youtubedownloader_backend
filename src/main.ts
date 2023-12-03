@@ -7,6 +7,8 @@ import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const PORT = 3000;
+
   const config = new ConfigService();
 
   // enviornment=development #development production
@@ -21,6 +23,6 @@ async function bootstrap() {
       forbidNonWhitelisted: true /* not working without whitelist:true */,
     }),
   );
-  await app.listen(3000);
+  await app.listen(PORT, () => console.log('App is running on port: ' + PORT));
 }
 bootstrap();
