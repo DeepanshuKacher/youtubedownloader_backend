@@ -1,7 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
-  Logger,
+  // Logger,
 } from '@nestjs/common';
 import * as ytdl from 'ytdl-core';
 import * as fs from 'fs';
@@ -9,8 +9,7 @@ import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import { DownloadVideo, UrlValidation } from './dto/validation.dto';
 import { ConfigService } from '@nestjs/config';
-import { Cron } from '@nestjs/schedule';
-import path from 'path';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 // type VideoMetadata = {
 //   mimeType: string;
@@ -43,11 +42,13 @@ import path from 'path';
 @Injectable()
 export class AppService {
   constructor(
+    // private downloadFolder: './downloads',
     private config: ConfigService,
-    private readonly schduleDelete: Logger,
   ) {
     this.createDownloadsDirectory();
   }
+
+  downloadFolder: './downloads';
 
   async getHello(): Promise<any> {
     return 'hello';
@@ -1043,41 +1044,19 @@ export class AppService {
   //   return { itag, videoUrl, hasAudio };
   // }
 
-  @Cron('* 10 * * * *')
+  @Cron(CronExpression.EVERY_10_MINUTES)
   handleDownload() {
-    this.deleteFilesOlderThan5Minutes('./downloads');
-  }
+    const fiveMinutes: number = 5 * 60 * 1000;
+    const now = Date.now();
 
-  deleteFilesOlderThan5Minutes(directoryPath: string): void {
-    const directory: string = path.join(__dirname, directoryPath);
-
-    fs.readdir(directory, (err, files) => {
-      if (err) {
-        console.error('Error reading directory:', err);
-        return;
-      }
-
-      const now: number = Date.now();
-      const fiveMinutes: number = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-      files.forEach((file) => {
-        const filePath: string = path.join(directory, file);
-
-        fs.stat(filePath, (err, stats) => {
-          if (err) {
-            console.error(`Error getting file stats for ${file}:`, err);
-            return;
-          }
-
-          const creationTime: number = stats.birthtime.getTime();
-
-          if (now - creationTime > fiveMinutes) {
-            fs.unlink(filePath, (err) => {
-              if (err) {
-                console.error(`Error deleting ${file}:`, err);
-                return;
-              }
-              console.log(`${file} was deleted successfully.`);
+    fs.readdir('./downloads', (err, data) => {
+      if (err) throw err;
+      data.map((item) => {
+        fs.stat('./downloads/' + item, (err, stats) => {
+          // console.log(now - stats?.birthtime.getTime() > fiveMinutes);
+          if (now - stats?.birthtime.getTime() > fiveMinutes) {
+            fs.unlink('./downloads/' + item, (err) => {
+              if (err) throw err;
             });
           }
         });
@@ -1086,7 +1065,7 @@ export class AppService {
   }
 
   private createDownloadsDirectory(): void {
-    const downloadsPath = path.join(__dirname, './downloads');
+    const downloadsPath = './downloads';
 
     fs.mkdir(downloadsPath, { recursive: true }, (err) => {
       if (err) {
