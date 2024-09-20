@@ -23,6 +23,9 @@ async function bootstrap() {
       forbidNonWhitelisted: true /* not working without whitelist:true */,
     }),
   );
+
+  app.setGlobalPrefix('api');
+
   await app.listen(PORT, () => console.log('App is running on port: ' + PORT));
 }
 bootstrap();
