@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const PORT = 3000;
+  const PORT = 3050;
 
   const config = new ConfigService();
 
